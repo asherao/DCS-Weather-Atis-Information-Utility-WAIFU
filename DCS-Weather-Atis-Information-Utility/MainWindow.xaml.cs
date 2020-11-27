@@ -98,12 +98,12 @@ using Path = System.IO.Path;
  * clean up the getLuaValues logic to merge them for SP and MP (complete)
  * make a "hide mode" or "click to view" or "hover to view" to the user path display (complete)
  * have ppl demo it (complete)
+ * release on github (complete)
  * 
  * 
  * TODO 2: before release
  * make a demo video (keep it short!) and explain the features
  * 
- * release on github
  * release on ED UserFiles
  * Release forum post
  * 
