@@ -1,0 +1,9 @@
+﻿<Application x:Class="DCS_Weather_Atis_Information_Utility.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:DCS_Weather_Atis_Information_Utility"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>
