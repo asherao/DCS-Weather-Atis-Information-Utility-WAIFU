@@ -6,20 +6,24 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
@@ -99,13 +103,17 @@ using Path = System.IO.Path;
  * make a "hide mode" or "click to view" or "hover to view" to the user path display (complete)
  * have ppl demo it (complete)
  * release on github (complete)
+ * release on ED UserFiles (complete)
+ * Release forum post (complete)
+ * waifu wont run in waifu is already running (complete)
+ * waifu closes based on special menu options (complete)
+ * make the dcs/mods/options icons for the module bar (complete)
  * 
  * 
- * TODO 2: before release
- * make a demo video (keep it short!) and explain the features
- * 
- * release on ED UserFiles
- * Release forum post
+ * TODO 2:
+ * make v2 release folder structure
+ * write v2 readme
+ * make a demo video (keep it short!) and explain the features (with waifu voice)
  * 
  * 
  * TODO 9 eventually
@@ -159,25 +167,23 @@ namespace DCS_Weather_Atis_Information_Utility
     /// </summary>
     /// 
     public static class ExtensionMethods
-    {
+    {//this is the logic for the rounding stuff
         public static int RoundOff(this int i)
         {
             return ((int)Math.Round(i / 10.0)) * 10;
         }
     }
 
-    
-
-
     public partial class MainWindow : Window
     {
-
+        
         
         //-----Global Variables-----///
         FileSystemWatcher watcher = new FileSystemWatcher();//this...is actually not necessary unless i let the user use the option. likely not....
         SpeechSynthesizer synth = new SpeechSynthesizer();//the thing that allows the computer to talk. maybe have voice options
 
         string userSelectedFilepath;
+        string userSelectedFilepathParent;//used for the filewatcher
         string dcsSavedGamesFolder;
         string spTrackFolder;//this is the folder located in the users AppData/temp
         string mpTrackFolder;
@@ -205,16 +211,113 @@ namespace DCS_Weather_Atis_Information_Utility
 
         FileInfo newestFileName;
 
+        FileSystemWatcher fileSystemWatcher1;
+
+        //i dont think these three things are actually used for WAIFU
+        string dcs_topFolderPath;
+        bool isDcsLocationSet;
+        bool isDCSrunning;
+
+        int secondsToCheckIfDcsIsAlive = 1;//DiCE will check if DCS.exe is running at this rate. 2 was fine
+
+        //this inits the timer. Putting here allows it to be used in the whole program
+        System.Windows.Threading.DispatcherTimer dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+
+
         //-----Global Variables-----///
 
+
+       
         public MainWindow()
         {
+        
+            //-----------------------------------------------------------------------------------------
+            //-----Is DCS WAIFU Already Running Check
+            //-----------------------------------------------------------------------------------------
+
+            //simple check to make sure that an instance of dice is not launched while an instance is already running
+            //https://stackoverflow.com/questions/7182949/how-to-check-if-a-wpf-application-is-already-running
+            string procName = Process.GetCurrentProcess().ProcessName;
+
+            // get the list of all processes by the "procName"       
+            Process[] processes = Process.GetProcessesByName(procName);
+
+            if (processes.Length > 1)
+            {
+                if (isLogModeEnabled)
+                    MessageBox.Show(procName + " already running.");//i dont want a message, just block the program
+                System.Windows.Application.Current.Shutdown();
+                return;
+            }
+            else
+            {
+                // Application.Run(...);
+            }
+
+            InitializeComponent();
+
 
             
-            InitializeComponent();
-            
+
+            //-----------------------------------------------------------------------------------------
+            //------------Timer Init
+            //-----------------------------------------------------------------------------------------
+
+                //https://stackoverflow.com/questions/5410430/wpf-timer-like-c-sharp-timer
+
+                dispatcherTimer.Tick += dispatcherTimer_Tick;
+            dispatcherTimer.Interval = new TimeSpan(0, 0, secondsToCheckIfDcsIsAlive);//set the time for the DCS process check here (seconds, minutes, hours)
+
+            //-----------------------------------------------------------------------------------------
+            //--------Get The DCS.exe Location
+            //-----------------------------------------------------------------------------------------
+
+            //https://stackoverflow.com/questions/51148/how-do-i-find-out-if-a-process-is-already-running-using-c
+            //https://stackoverflow.com/questions/5497064/how-to-get-the-full-path-of-running-process
+            //This gets the full path of DCS when DCS.exe is running as long as the process is called 'DCS'
+            //this actually works!
+
+            foreach (Process clsProcess in Process.GetProcesses())
+            {
+                //now we're going to see if any of the running processes
+                //match the currently running processes. Be sure to not
+                //add the .exe to the name you provide, i.e: NOTEPAD,
+                //not NOTEPAD.EXE or false is always returned even if
+                //notepad is running.
+                //Remember, if you have the process running more than once, 
+                //say IE open 4 times the loop thr way it is now will close all 4,
+                //if you want it to just close the first one it finds
+                //then add a return; after the Kill
+                //for some reason you need this https://stackoverflow.com/questions/34070969/i-get-a-32-bit-processes-cannot-access-modules-of-a-64-bit-process-exception
+                //targeting 64 bit fixed it
+                if (clsProcess.ProcessName.Equals("DCS"))
+                {
+                    //if the process is found to be running then we
+                    //return a true
+                    var process = Process.GetCurrentProcess(); // Or whatever method you are using (I dont think this does anything as is)
+                    string userDcs_Full_pathWithExtention = clsProcess.MainModule.FileName;
+                    //MessageBox.Show(userDcs_Full_pathWithExtention);//shows the path od dcss to include the exe when dcs is running
+                    if (isLogModeEnabled)
+                        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "DCS.exe path: '" + userDcs_Full_pathWithExtention + "'");
+                    richTextBox_log.ScrollToEnd();
+                    dcs_topFolderPath = userDcs_Full_pathWithExtention.Remove(userDcs_Full_pathWithExtention.Length - 12);//remove the bin and exe so that you get to the top folder
+                    isDcsLocationSet = true;
+                    isDCSrunning = true;//using this instead of the else ofr reasons explained below
+                    dispatcherTimer.Start();//starts the timer
+                }
+                else
+                {
+                    //richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "DCS is not detected. Close DiCE, make sure you have installed DiCE correctly, and then re-start DCS.");
+                    //for some reason this repeats, a lot, on launch.OOOOOOooooh, thats because its in the 'foreach', so it sends the message for every process that isn't DCS.
+                }
+            }
+
+            //https://stackoverflow.com/questions/14899422/how-to-navigate-a-few-folders-up
+
+
+
             //i think the code starts here. Sweet
-            //get rid of the extra space in the ritch text box after each entry
+            //get rid of the extra space in the rich text box after each entry
             //https://stackoverflow.com/questions/325075/how-do-i-change-richtextbox-paragraph-spacing
 
             synth.SpeakCompleted += syth_SpeakCompleted;//flags when speach is complete
@@ -341,15 +444,158 @@ namespace DCS_Weather_Atis_Information_Utility
                 }
                 richTextBox_log.ScrollToEnd();
             }
-            
+
+            //-------------------------------------------------------------------------------
+            //-----Read options lua to see if the program should automatically close
+            //-----------------------------------------------------------------------------------
+
+
+            //this has to be put here because i think the delay is messing with the resulkts of the inquiry when "invoked"
+            var optionsLuaText = LsonVars.Parse(File.ReadAllText(userSelectedFilepath));//put the contents of the options.lua into a lua read
+            closeWaifuAfterDcsClose = optionsLuaText["options"]["plugins"]["DCS WAIFU"]["closeWaifuAfterDcsClose"].GetBool();//this will get either true of false
+            closeWaifuAfterDcsLaunch = optionsLuaText["options"]["plugins"]["DCS WAIFU"]["closeWaifuAfterDcsLaunch"].GetBool();//this will get either true or false
+
+            if (closeWaifuAfterDcsLaunch == true)
+            {
+                //MessageBox.Show("Closing WAIFU because the value is" + closeWaifuAfterDcsLaunch.ToString());
+                CloseDcsWaifu();
+            }
+            else
+            {
+                //dont close dcsWaifu
+                //MessageBox.Show("Not Closing WAIFU because the value is " + closeWaifuAfterDcsLaunch.ToString());
+            }
+
+
+
             //MessageBox.Show(Environment.ExpandEnvironmentVariables(@"%USERPROFILE%\Saved Games\DCS.openbeta\Config\options.lua"));
             savedGamesSelectionRectangeCheck();
             if (isLogModeEnabled)//supper shorthand for "if true do the next line"
                 richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "This program has been launched from - " + programLocation);
             richTextBox_log.ScrollToEnd();
+            listenToUsersOptionsFile();
+            if (isLogModeEnabled)//supper shorthand for "if true do the next line"
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + 
+                    "Listening to options.lua");
+            richTextBox_log.ScrollToEnd();
         }
 
-    
+        private void listenToUsersOptionsFile()
+        {//this makes the timer
+            //https://www.c-sharpcorner.com/UploadFile/ad8d1c/watch-a-folder-for-updation-in-wpf-C-Sharp/
+            fileSystemWatcher1 = new FileSystemWatcher(userSelectedFilepathParent, "options.lua");//userSelectedFilepath is the options lua
+            //richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Watching for changes in: " + optionsLua_topFolderPath + "\\options.lua");
+            //richTextBox_log.ScrollToEnd();
+
+            fileSystemWatcher1.EnableRaisingEvents = true;
+            fileSystemWatcher1.IncludeSubdirectories = true;
+            //This event will check for  new files added to the watching folder
+            //fileSystemWatcher1.Created += new FileSystemEventHandler(newfile);
+            //This event will check for any changes in the existing files in the watching folder
+            fileSystemWatcher1.Changed += new FileSystemEventHandler(fs_Changed);
+            //this event will check for any rename of file in the watching folder
+            //fileSystemWatcher1.Renamed += new RenamedEventHandler(fs_Renamed);
+            //this event will check for any deletion of file in the watching folder
+            //fileSystemWatcher1.Deleted += new FileSystemEventHandler(fs_Deleted);
+
+            //var pathWithEnv = @"%USERPROFILE%\Saved Games"; //this does not work because options.lua is too deep
+            //var filePath = Environment.ExpandEnvironmentVariables(pathWithEnv);
+            //fileSystemWatcher1.Path = (filePath);
+            fileSystemWatcher1.Path = Directory.GetParent(userSelectedFilepath).ToString();
+            fileSystemWatcher1.Filter = "options.lua";
+            if (isLogModeEnabled)
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
+                    "Listening to " + Path.Combine(Directory.GetParent(userSelectedFilepath).ToString(), "options.lua"));
+            //MessageBox.Show("listening via filesystemwatcher");
+        }
+
+        DateTime fsLastRaised = DateTime.Now;//this is going to be used for making sure that 
+        //there isnt an overreaction to the options lua being changed
+
+        bool closeWaifuAfterDcsClose;
+        bool closeWaifuAfterDcsLaunch;
+
+        public void fs_Changed(object fschanged, FileSystemEventArgs changeEvent)
+        {
+            ReadOptionsLuaFile();//the sender shouldnt matter because i have a fliter and i know what file i want
+        }
+
+        public void ReadOptionsLuaFile()
+        {
+            if (DateTime.Now.Subtract(fsLastRaised).TotalMilliseconds > 1000)//this hopefully prevents the options.lua to be read multiple times within 1 second
+            {
+                fsLastRaised = DateTime.Now;
+                //MessageBox.Show("The file was chaged");//this works, trust me. Try to get it to watch, specifically, the options.lua file.
+                //https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/file-system/how-to-read-from-a-text-file
+                //these are the names of the identifiers in the options.lua file
+
+                Thread.Sleep(500);//is hopefully prevents the read of the below file during a DCS write. has not failed at 1000, yet.
+                                  //2000 kinda takes too long, personally
+                                  //500 seems to be working fine with the multi-change check
+                                  //https://stackoverflow.com/questions/9732709/the-calling-thread-cannot-access-this-object-because-a-different-thread-owns-it
+                                  //where the invoke thing comes from
+
+                this.Dispatcher.Invoke(() =>
+                {
+                    if (isLogModeEnabled)
+                        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "A change in Options.lua was detected.");
+                    try
+                    {
+                        var optionsLuaText = LsonVars.Parse(File.ReadAllText(userSelectedFilepath));//put the contents of the options.lua into a lua read
+                        closeWaifuAfterDcsClose = optionsLuaText["options"]["plugins"]["DCS WAIFU"]["closeWaifuAfterDcsClose"].GetBool();//this will get either true of false
+
+                        if (closeWaifuAfterDcsClose == true)
+                        {
+                            if (isLogModeEnabled)
+                                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
+                            "DCS WAIFU will close after DCS closes.");
+                            richTextBox_log.ScrollToEnd();
+                        }
+                        
+
+                        closeWaifuAfterDcsLaunch = optionsLuaText["options"]["plugins"]["DCS WAIFU"]["closeWaifuAfterDcsLaunch"].GetBool();//this will get either true or false
+
+                        if (closeWaifuAfterDcsLaunch == true)
+                        {
+                            if (isLogModeEnabled)
+                                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
+                            "DCS WAIFU will close after DCS launches.");
+                            richTextBox_log.ScrollToEnd();
+                        }
+                    }
+                    catch (IOException f)
+                    {
+                        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "DCS-WAIFU could not read the options.lua");
+                        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + f.Message);
+                        richTextBox_log.ScrollToEnd();
+                    }
+                });
+            }
+        }
+
+
+        public void CheckOptionsLusSettingsOnLaunch()
+        {
+            try
+            {
+                var optionsLuaText = LsonVars.Parse(File.ReadAllText(userSelectedFilepath));//put the contents of the options.lua into a lua read
+                closeWaifuAfterDcsClose = optionsLuaText["options"]["plugins"]["DCS WAIFU"]["closeWaifuAfterDcsClose"].GetBool();//this will get either true of false
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
+                    "DCS WAIFU will close after DCS closes.");
+                richTextBox_log.ScrollToEnd();
+
+                closeWaifuAfterDcsLaunch = optionsLuaText["options"]["plugins"]["DCS WAIFU"]["closeWaifuAfterDcsLaunch"].GetBool();//this will get either true or false
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
+                    "DCS WAIFU will close after DCS launches.");
+                richTextBox_log.ScrollToEnd();
+            }
+            catch (IOException f)
+            {
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "DCS-WAIFU could not read the options.lua");
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + f.Message);
+                richTextBox_log.ScrollToEnd();
+            }
+        }
 
         private void SelectDCS_button_click(object sender, RoutedEventArgs e)
         {
@@ -599,6 +845,7 @@ namespace DCS_Weather_Atis_Information_Utility
         public void generateFilePaths()
         {
             //MessageBox.Show(userSelectedFilepath);
+            userSelectedFilepathParent = Directory.GetParent(userSelectedFilepath).ToString();
             dcsSavedGamesFolder = System.IO.Path.GetFullPath(System.IO.Path.Combine(userSelectedFilepath, @"..\..\"));
             mpTrackFolder = Path.Combine(dcsSavedGamesFolder, "tracks", "Multiplayer");
             missionFileToDelete = Path.Combine(DcsWaifuSettingsLocation, "mission");//deletes the mission file if there was one. 
@@ -941,8 +1188,7 @@ namespace DCS_Weather_Atis_Information_Utility
             //15288
             //10 = 16093
             //more than 10 miles
-
-            //TODO:make sure the minimumvis is rounded
+           
 
             if (minimumVis > 16093)
             {
@@ -954,17 +1200,6 @@ namespace DCS_Weather_Atis_Information_Utility
                 //synth.Speak(talk);
                 //talk.ClearContent();
             }
-            //else//this is the old way it was done
-            //{//TODO 2: he says "1 miles". make a condition that give visibility either in quartermiles or feet when less than 1 mile
-            //    Double meterToNauticalMiles_conversion = 0.000621371;
-            //    Double generalVisibilityMiles = Convert.ToDouble(minimumVis) * meterToNauticalMiles_conversion;
-            //    //talk.AppendText("Visibility: ");
-            //    //talk.AppendText(Convert.ToInt32(generalVisibilityMiles) + " miles.");
-            //    //Console.WriteLine("Visibility: " + generalVisibilityMiles + " miles");
-            //    formatedVisText = ("Visibility: " + generalVisibilityMiles + " miles");
-            //    //synth.Speak(talk);
-            //    //talk.ClearContent();
-            //}
             else if (minimumVis < 402)
             {
                 formatedVisText = ("Visibility: M1/4nm");
@@ -1384,15 +1619,10 @@ namespace DCS_Weather_Atis_Information_Utility
                 formatedVisText);
                 kneeboardAtisString = kneeboardAtisString +
                 "Vis +10nm" +
-                "\\n";//TODO: i think that this is repeated
+                "\\n";
             }
             else
-            {//TODO 2: he says "1 miles". make a condition that give visibility either in quartermiles or feet when less than 1 mile
-             //Double meterToNauticalMiles_conversion = 0.000621371;
-             //Double generalVisibilityMiles = Convert.ToDouble(minimumVis) * meterToNauticalMiles_conversion;
-             //atisBrief.AppendText("Visibility: ");
-             //atisBrief.AppendText(Convert.ToInt32(generalVisibilityMiles) + " miles");
-
+            {
                 //richTextBox_log.AppendText(Environment.NewLine +
                 //"Visibility: " + generalVisibilityMiles + " miles");
                 atisBrief.AppendText(formatedVisSay);
@@ -1672,7 +1902,7 @@ namespace DCS_Weather_Atis_Information_Utility
             "dx  = 50/512",
             //"add_picture(\"pilot_KA50_notepad\",0,0,2,2*GetAspect(),dx,0,1 - 2*dx,1)",
             //"add_picture('E:\\\\Games\\\\DCS Documents\\\\Projects\\\\DCS-Weatherman\\\\customKneeboardPicture.png')",
-            "add_picture('" + kneeboardImageFullName + "')",//todo 3: make a better fitting pic
+            "add_picture('" + kneeboardImageFullName + "')",
             //"add_text(\"\",0.05,0.05)",//this is the original version
 
             "add_text(\"" + "\\n\\n" + kneeboardAtisString + "\",0.05,0.05)",//this is the modified version
@@ -3477,6 +3707,13 @@ namespace DCS_Weather_Atis_Information_Utility
 
         private void closeButton_Click(object sender, RoutedEventArgs e)
         {
+            CloseDcsWaifu();
+        }
+
+        private void CloseDcsWaifu()
+        {
+            dispatcherTimer.Stop(); //https://stackoverflow.com/questions/5410430/wpf-timer-like-c-sharp-timer
+
             if (isLogModeEnabled)//supper shorthand for "if true do the next line"
                 richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Closing...");
             richTextBox_log.ScrollToEnd();
@@ -3767,6 +4004,22 @@ namespace DCS_Weather_Atis_Information_Utility
                 richTextBox_log.ScrollToEnd();
             }
         }
+        private void dispatcherTimer_Tick(object sender, EventArgs e)//fires every 1 seconds
+        {
+            //https://stackoverflow.com/questions/262280/how-can-i-know-if-a-process-is-running
+            //if DCS is not running, this program will close
+            Process[] pname = Process.GetProcessesByName("DCS");
+            if (pname.Length == 0)
+            {
+                if (closeWaifuAfterDcsClose == true)
+                {
+                    CloseDcsWaifu();
+                }
+            }
+            else//if DCS is running, the program will continue
+            { }
+        }
+       
     }
-        
+   
 }
