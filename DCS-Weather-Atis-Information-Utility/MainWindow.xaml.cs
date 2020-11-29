@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -108,11 +109,11 @@ using Path = System.IO.Path;
  * waifu wont run in waifu is already running (complete)
  * waifu closes based on special menu options (complete)
  * make the dcs/mods/options icons for the module bar (complete)
+ * Launch With DCS (requested by Hornel/Lion) (complete)
  * 
  * 
  * TODO 2:
- * make v2 release folder structure
- * write v2 readme
+ * test waifu mode on a different setup
  * make a demo video (keep it short!) and explain the features (with waifu voice)
  * 
  * 
@@ -144,7 +145,9 @@ using Path = System.IO.Path;
  * 
  * Wishlist:
  * -Imperial and metric version
- * -Launch With DCS (requested by Hornel/Lion)
+ * -Japanese synth voice
+ * -Solve that one persons folder structure problem by allowing them to select their folder if the 
+ *      predetermined one does not exist.
  * 
  * 
  * Goals:
@@ -180,7 +183,10 @@ namespace DCS_Weather_Atis_Information_Utility
         
         //-----Global Variables-----///
         FileSystemWatcher watcher = new FileSystemWatcher();//this...is actually not necessary unless i let the user use the option. likely not....
+
         SpeechSynthesizer synth = new SpeechSynthesizer();//the thing that allows the computer to talk. maybe have voice options
+
+        
 
         string userSelectedFilepath;
         string userSelectedFilepathParent;//used for the filewatcher
@@ -217,6 +223,7 @@ namespace DCS_Weather_Atis_Information_Utility
         string dcs_topFolderPath;
         bool isDcsLocationSet;
         bool isDCSrunning;
+        bool isWaifuModeOn;
 
         int secondsToCheckIfDcsIsAlive = 1;//DiCE will check if DCS.exe is running at this rate. 2 was fine
 
@@ -256,16 +263,23 @@ namespace DCS_Weather_Atis_Information_Utility
 
             InitializeComponent();
 
-
-            
+            //-------
+            //Waifu Check
+            //------
+            int random_number_waifuCheck = new Random().Next(1, 50);//chose a random number between 1 and 999
+            //MessageBox.Show(random_number_waifuCheck.ToString());
+            if (random_number_waifuCheck == 23) //if the number turns out to be 23 https://stackoverflow.com/questions/10079912/c-sharp-probability-and-random-numbers
+            {
+                isWaifuModeOn = true;
+            }
 
             //-----------------------------------------------------------------------------------------
             //------------Timer Init
             //-----------------------------------------------------------------------------------------
 
-                //https://stackoverflow.com/questions/5410430/wpf-timer-like-c-sharp-timer
+            //https://stackoverflow.com/questions/5410430/wpf-timer-like-c-sharp-timer
 
-                dispatcherTimer.Tick += dispatcherTimer_Tick;
+            dispatcherTimer.Tick += dispatcherTimer_Tick;
             dispatcherTimer.Interval = new TimeSpan(0, 0, secondsToCheckIfDcsIsAlive);//set the time for the DCS process check here (seconds, minutes, hours)
 
             //-----------------------------------------------------------------------------------------
@@ -321,6 +335,25 @@ namespace DCS_Weather_Atis_Information_Utility
             //https://stackoverflow.com/questions/325075/how-do-i-change-richtextbox-paragraph-spacing
 
             synth.SpeakCompleted += syth_SpeakCompleted;//flags when speach is complete
+                                                        //synth.SelectVoiceByHints(VoiceGender.Female, VoiceAge.Teen);//sets the character of the voice
+                                                        //synth.SelectVoice("Microsoft Haruka Desktop");
+
+
+            VoiceInfo info;
+
+            foreach (InstalledVoice voice in synth.GetInstalledVoices())
+            {
+                info = voice.VoiceInfo;
+                //MessageBox.Show(" Voice Name: " + info.Name);
+                synth.SelectVoice(info.Name);
+                //synth.Speak("This is a demo.");
+            }
+            
+
+
+
+
+
             synth.SetOutputToDefaultAudioDevice();//says which speaker/device to use
             //https://docs.microsoft.com/en-us/dotnet/api/system.speech.synthesis.speechsynthesizer.volume?view=netframework-4.8
             //https://www.wpf-tutorial.com/misc-controls/the-slider-control/
@@ -331,9 +364,10 @@ namespace DCS_Weather_Atis_Information_Utility
             //the two lines below make sure that the black fill is set to the correct location on init
             synthSpeed_slider.SelectionEnd = synthSpeed_slider.Value;
             synthVolume_slider.SelectionEnd = synthVolume_slider.Value;
+            //synth.SelectVoice("Microsoft Haruka Desktop");
             //isLogModeEnabled = false;
 
-           
+
 
             //-----Check to see if Info file has already been created----//
 
@@ -675,148 +709,7 @@ namespace DCS_Weather_Atis_Information_Utility
             }
         }
 
-        //this is now obsolete because we have seperate SP and MP buttons
-
-        //public void getAtis_button_click(object sender, RoutedEventArgs e)
-        //{
-        //    //https://stackoverflow.com/questions/10753661/how-to-check-a-var-for-null-value
-        //    if (dcsSavedGamesFolder == null)//selection check
-        //    {
-        //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "Please select your DCS Saved Games Options.lua file." + mizName);
-        //        richTextBox_log.ScrollToEnd();
-        //        return;
-        //    }
-
-
-
-        //    saveSettings();//saved the settings to the json
-        //    synth.SpeakAsyncCancelAll();//stops the atis broadcast if it was going
-        //    atisBrief.ClearContent();//clears the atis broadcast queue
-        //    //delete the mission file
-
-        //    //you should think of a more responsible way of makiing sure the newest file grabbed is a miz 
-        //    File.Delete(missionFileToDelete);
-        //    //https://stackoverflow.com/questions/1179970/how-to-find-the-most-recent-file-in-a-directory-using-net-and-without-looping
-
-            
-        //    FileInfo newestMPFile = GetNewestFile(new DirectoryInfo(mpTrackFolder));
-
-        //    FileInfo newestSPFile = GetNewestFile(new DirectoryInfo(spTrackFolder));
-
-
-
-        //    //https://stackoverflow.com/questions/4366976/how-to-compare-two-files-based-on-datetime
-        //    DateTime mpFileCreationTime = File.GetLastWriteTime(newestMPFile.DirectoryName);//.ToString() returned some date from year 1601, haha
-        //    DateTime spFileCreationTime = File.GetLastWriteTime(newestSPFile.DirectoryName);
-
-        //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "The most recent MP mission file was created - " + mpFileCreationTime);
-        //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "The most recent SP mission file was created - " + spFileCreationTime);
-        //    richTextBox_log.ScrollToEnd();
-
-        //    int DateTimeCompareInt = DateTime.Compare(spFileCreationTime, mpFileCreationTime);
-            
-        //    if (DateTimeCompareInt < 0)//this means that the SP file is newer
-        //    {
-        //        newestSPFile = new FileInfo(Path.Combine(spTrackFolder,"tempMission.miz")); //bc i know that should be the filename
-        //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "The SP mission file is newer.");
-        //        newestFileName = newestSPFile;
-        //    }
-        //    else if (DateTimeCompareInt > 0)//this means that the MP file is newer
-        //    {
-        //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "The MP mission file is newer.");
-        //        newestFileName = newestMPFile;
-        //    }
-        //    else//if the int is 0, that means the files are the same time, which should never happen
-        //    {
-        //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "The SP and MP mission files were created at the same time, somehow.");
-        //        //just chose one since they are the same (?)
-        //        newestFileName = newestSPFile;
-        //    }
-
-        //    if (newestFileName.Name.Contains(".trk") || newestFileName.Name.Contains(".miz"))//you can change this to .miz fort testing
-        //    {
-        //        mizName = newestFileName.FullName;
-        //        //MessageBox.Show(mpTrackFolder);
-        //        //MessageBox.Show(mizName);
-        //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "Newest .trk or .miz has been located - " + mizName);
-        //        richTextBox_log.ScrollToEnd();
-
-        //        //unzip
-        //        using (ZipFile zip = ZipFile.Read(mizName))
-        //        {
-        //            ZipEntry p = zip["mission"];//i changed e to p
-        //            p.Extract(mpTrackFolder, ExtractExistingFileAction.OverwriteSilently);//?
-        //        }
-
-        //        var missionLuaText = LsonVars.Parse(File.ReadAllText(Path.Combine(mpTrackFolder, "mission")));//?
-        //        //lua version
-
-
-        //        //getTheatreFromLua();
-        //        theatre = missionLuaText["mission"]["theatre"].ToString();//result is "theatre" containing "Syria"
-        //        getInformationLetter();//result is "atisInformationLetter" containing "Alpha"
-
-        //        //--getWindsFromLua---//
-        //        windSpeedGroundLua = missionLuaText["mission"]["weather"]["wind"]["atGround"]["speed"].GetDouble();
-        //        windDirectionGroundLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["wind"]["atGround"]["dir"].GetInt());//https://stackoverflow.com/questions/20375109/how-can-i-convert-a-var-type-to-int
-        //        getWindsFromLua();//results
-        //                          //windSpeedGroundString containing "calm" or "25"
-        //                          //windDirectionGroundLua containing "123"
-        //                          //the logic for the completed and formated string is already in the method, but currently commented out
-
-        //        //---Get Visibility from the Lua file---//
-        //        generalVisibilityLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["visibility"]["distance"].GetInt());
-        //        dustVisibilityLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["dust_density"].GetInt());
-        //        fogVisibilityLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["fog"]["visibility"].GetInt());
-        //        isFogEnabledLua = missionLuaText["mission"]["weather"]["enable_fog"].ToString();
-        //        isDustEnabledLua = missionLuaText["mission"]["weather"]["enable_dust"].ToString();
-        //        GetVisibilityFromLua();
-        //        //result: generalVisibilityMiles that contains the number of miles of vis. the logic for the formating is in the method, but currently commented out
-
-        //        //---Get Clouds from the Lua file---//
-        //        cloudDensityNumberLua = missionLuaText["mission"]["weather"]["clouds"]["density"].ToString();
-        //        cloudHeightLua = missionLuaText["mission"]["weather"]["clouds"]["base"].GetDouble();
-        //        precipValue = missionLuaText["mission"]["weather"]["clouds"]["iprecptns"].GetInt();
-        //        GetCloudsFromLua();
-        //        //results: cloudDensityAmountLua contains the sky condition
-        //        //cloudHeightFeetDecimal_rounded_int contains the height of the cloud in feet rounded to nearest 100
-        //        //precipValue contains 1 or 2. Rain or rain/thunder
-        //        //the logic for the formating is in the method, but currently commented out
-
-        //        //---Get Temp and Dewpoint from the Lua file---//
-        //        temperatureLua = missionLuaText["mission"]["weather"]["season"]["temperature"].GetDouble();
-        //        GetTempAndDewPointFromLua();
-        //        //Results
-        //        //temperatureActual contains "18"
-        //        //dewpointTemperature_string contains "8"
-        //        //the logic for the formating is in the method, but currently commented out
-
-        //        //---Get QNH and inHg from the Lua file---//
-        //        qnhLua = missionLuaText["mission"]["weather"]["qnh"].GetDouble();
-        //        GetQnhFromLua();
-        //        //Results:
-        //        //qnhActual contains "765"
-        //        //firstTwoInMgDigits contains "29"
-        //        //lastTwoInMgDigits contains "92"
-        //        //the logic for the formating is in the method, but currently commented out
-
-        //        generateAtisBrief();
-        //    }
-        //    else
-        //    {
-        //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-        //            "The newest file isn't a .trk :(");
-        //        richTextBox_log.ScrollToEnd();
-        //    }
-        //}
-
+      
 
         string theatre;
 
@@ -1059,7 +952,7 @@ namespace DCS_Weather_Atis_Information_Utility
             metersPerSec_to_knots_multiplier = 1.94384;
             windSpeedGround = windSpeedGroundLua * metersPerSec_to_knots_multiplier;
 
-            windSpeedGroundString = ("Calm");
+            //windSpeedGroundString = ("Calm");
 
             if (windSpeedGround < 3)//if the wind is less than 3 knts, it will be "calm"
             {
@@ -1405,11 +1298,11 @@ namespace DCS_Weather_Atis_Information_Utility
 
                 if (secondDigit.Equals("0"))//if the second digit is 0, we have a special case where we dont want to say it.
                 {
-                    formatedCloudsText = firstDigit + " thousand";
+                    formatedCloudsText = ConvertNumbersToWords(firstDigit) + " thousand";
                 }
                 else//in the case that the second digit is not zero, which is most cases
                 {
-                    formatedCloudsText = firstDigit + " thousand" + secondDigit + "hundred";
+                    formatedCloudsText = ConvertNumbersToWords(firstDigit) + " thousand" + ConvertNumbersToWords(secondDigit) + "hundred";
                 }
             }
 
@@ -1427,11 +1320,11 @@ namespace DCS_Weather_Atis_Information_Utility
 
                 if (thirdDigit.Equals("0"))//if the third digit is 0, we have a special case where we dont want to say it.
                 {
-                    formatedCloudsText = firstDigit + " " + secondDigit + " thousand";//the space is there so the bot does not combine the numbers
+                    formatedCloudsText = ConvertNumbersToWords(firstDigit) + " " + ConvertNumbersToWords(secondDigit) + " thousand";//the space is there so the bot does not combine the numbers
                 }
                 else//in the case that the second digit is not zero, which is most cases
                 {
-                    formatedCloudsText = firstDigit + " " + secondDigit + " thousand" + thirdDigit + "hundred";//the space is there so the bot does not combine the numbers
+                    formatedCloudsText = ConvertNumbersToWords(firstDigit) + " " + ConvertNumbersToWords(secondDigit) + " thousand" + ConvertNumbersToWords(thirdDigit) + "hundred";//the space is there so the bot does not combine the numbers
                 }
                 //MessageBox.Show("rounded string is " + cloudHeightFeetDecimal_rounded_String + "\n" + "Formated voice text is " + formatedCloudsText);
             }
@@ -1482,15 +1375,36 @@ namespace DCS_Weather_Atis_Information_Utility
         string dewpointTemperature_string;
         int dewpointTemperature;
         int temperatureActual;
+        Double dewpointTemperatureDouble;
 
         public void GetTempAndDewPointFromLua()
         {
             //if it is raining, the dewpoint equals the temperature
 
+            /*So if there is a cloud layer reported in DCS you could work the formula backwards to get the dewpoint. 
+             * For instance temp is 10 and the clouds are at 4000, So take cloud altitude in thousands of feet and take 
+             * it times 2.5 to find the expected temp to dewpoint spread, so in this example= 4*2.5=8.5. Now that we have 
+             * the temp and the spread, we subtract the spread from temp to get dewpoint, so 10-8.5=1.5 celsius dewpoint. -Snake122*/
+
+            //that equation will be:
+            //airTemp - ((cloudAltitude/1000) * 2.5) = dewPoint
+
             relativeHumidity = 60;//the relative in percent. DCS does not give this number. I made it up. you can look for data 
-            //that crossreferences date and temnperature to get the humidity. ED will hopefully have this inthe WX update
+            //that crossreferences date and temnperature to get the humidity. ED will hopefully have this in the WX update
+
             //https://www.calculator.net/dew-point-calculator.html?airtemperature=18&airtemperatureunit=celsius&humidity=50&dewpoint=&dewpointunit=celsius&x=32&y=13
-            Double dewpointTemperatureDouble = temperatureLua - ((100 - relativeHumidity) / 5);
+            //https://www.eldoradoweather.com/forecast/middleeast/middleeasthumidity.html
+
+            //if there are clouds at a ceiling
+            if (cloudHeightFeetDecimal_rounded_int < 10000)//if cloudheight is less than 10000 (i just chose that number kinda randomly)
+            {//then calculate the dewpoint off of that
+                dewpointTemperatureDouble = temperatureLua - ((cloudHeightFeetDecimal_rounded_int / 1000) * 2.5);
+            }
+            else
+            {//else calculate the dewpoint off of 60% humidity
+                dewpointTemperatureDouble = temperatureLua - ((100 - relativeHumidity) / 5);
+            }
+            
 
             dewpointTemperature = Convert.ToInt32(dewpointTemperatureDouble);
 
@@ -1501,7 +1415,8 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 dewpointTemperature = Convert.ToInt32(temperatureLua);//if it is dewpointTemperatureraining, the dewpoint equals the temperature
             }
-            temperatureActual = Convert.ToInt32(temperatureLua);
+
+            temperatureActual = Convert.ToInt32(temperatureLua);//makes sure the temp is an int32
 
           
 
@@ -1549,10 +1464,33 @@ namespace DCS_Weather_Atis_Information_Utility
         }
 
         PromptBuilder atisBrief = new PromptBuilder();
+
+        string incomingNumber;//this is for the conversion that take place in "ConvertNumbersToWords()"
+        //"ConvertNumbersToWords()" takes strings
+
         string kneeboardAtisString = "";
         //i am making the kneeboard version more realistic to what is actually written, not what was said
         public void generateAtisBrief()
         {
+            //test
+            //incomingNumber = ConvertNumbersToWords("1007");
+            //MessageBox.Show(incomingNumber);
+            //test works
+            
+            //atisBrief.StartVoice(new CultureInfo("en-US"));
+            if (isWaifuModeOn)
+                atisBrief.StartVoice(new CultureInfo("ja-JP"));//this is how you get the japanese female voice
+            //the pair for this is EndVoice
+            //Microsoft Haruka Desktop
+            //https://docs.microsoft.com/en-us/dotnet/api/system.globalization.cultureinfo?view=net-5.0
+
+            //en-US is usa
+            //ja-JP is japan
+            //es-ES is spanish
+            //zh-TW is chinese Taiwan
+            //atisBrief.AppendText("one two three four five six test");
+            //atisBrief.AppendText("three  three three four five six test");
+
             richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
                 " ATIS Requested ");
             kneeboardAtisString = "";
@@ -1569,9 +1507,12 @@ namespace DCS_Weather_Atis_Information_Utility
                 atisBrief.AppendText(theatre);
             }
 
+            
+           
 
             atisBrief.AppendText("Information");//informatiuon
             atisBrief.AppendText(atisInformationLetter);//lima
+          
 
             richTextBox_log.AppendText(Environment.NewLine +
                 theatre + " Information " + atisInformationLetter);
@@ -1584,9 +1525,12 @@ namespace DCS_Weather_Atis_Information_Utility
             atisBrief.AppendText("Winds");//winds
             if (windSpeedGroundString == "Calm")
             {
-                atisBrief.AppendText(windSpeedGroundString);
-                atisBrief.AppendText("at");
-                atisBrief.AppendTextWithHint(windDirectionGroundLua.ToString(), SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(ConvertNumbersToWords(windSpeedGroundString.ToString()), SayAs.SpellOut);//this spells out every letter. oops
+                atisBrief.AppendText(windSpeedGroundString.ToString());
+                //atisBrief.AppendText(windSpeedGroundString);
+                atisBrief.AppendText(" at ");
+                //atisBrief.AppendTextWithHint(ConvertNumbersToWords(windDirectionGroundLua.ToString()), SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(windDirectionGroundLua.ToString()));
                 atisBrief.AppendText("degrees");
 
                 richTextBox_log.AppendText(Environment.NewLine +
@@ -1597,10 +1541,14 @@ namespace DCS_Weather_Atis_Information_Utility
             }
             else
             {
-                atisBrief.AppendTextWithHint(windDirectionGroundLua.ToString(), SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(ConvertNumbersToWords(windDirectionGroundLua.ToString()), SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(windDirectionGroundLua.ToString()));
                 atisBrief.AppendText("degrees");//or "at"
-                atisBrief.AppendTextWithHint(windSpeedGroundString, SayAs.SpellOut);//can either spell out or not
+                //atisBrief.AppendTextWithHint(ConvertNumbersToWords(windSpeedGroundString), SayAs.SpellOut);//can either spell out or not
+                atisBrief.AppendText(ConvertNumbersToWords(windSpeedGroundString.ToString()));
                 atisBrief.AppendText("knots");
+
+                //MessageBox.Show(ConvertNumbersToWords(windDirectionGroundLua.ToString()));
 
                 richTextBox_log.AppendText(Environment.NewLine +
                 "Winds: " + windDirectionGroundLua.ToString() + " degrees " + windSpeedGroundString + " knots");
@@ -1717,11 +1665,13 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 int temperatureActualAbsolute = Math.Abs(temperatureActual);
                 atisBrief.AppendText("Minus");
-                atisBrief.AppendTextWithHint(temperatureActualAbsolute.ToString(), SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(temperatureActualAbsolute.ToString(), SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(temperatureActualAbsolute.ToString()));
             }
             else
             {
-                atisBrief.AppendTextWithHint(temperatureActual.ToString(), SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(temperatureActual.ToString(), SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(temperatureActual.ToString()));
             }
 
 
@@ -1742,11 +1692,13 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 int dewpointTemperatureAbsolute = Math.Abs(dewpointTemperature);
                 atisBrief.AppendText("Minus");
-                atisBrief.AppendTextWithHint(dewpointTemperatureAbsolute.ToString(), SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(dewpointTemperatureAbsolute.ToString(), SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(dewpointTemperatureAbsolute.ToString()));
             }
             else
             {
-                atisBrief.AppendTextWithHint(dewpointTemperature.ToString(), SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(dewpointTemperature.ToString(), SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(dewpointTemperature.ToString()));
             }
 
             richTextBox_log.AppendText(Environment.NewLine +
@@ -1760,7 +1712,8 @@ namespace DCS_Weather_Atis_Information_Utility
             atisBrief.AppendBreak();
 
             atisBrief.AppendText("QNH: ");
-            atisBrief.AppendTextWithHint(qnhActual.ToString(), SayAs.SpellOut);
+            //atisBrief.AppendTextWithHint(qnhActual.ToString(), SayAs.SpellOut);
+            atisBrief.AppendText(ConvertNumbersToWords(qnhActual.ToString()));
             richTextBox_log.AppendText(Environment.NewLine +
                 "QNH: " + qnhActual + " mmHg");
             kneeboardAtisString = kneeboardAtisString +
@@ -1772,7 +1725,8 @@ namespace DCS_Weather_Atis_Information_Utility
             atisBrief.AppendBreak();
 
             atisBrief.AppendText("Millibar: ");
-            atisBrief.AppendTextWithHint(millibarFinal.ToString(), SayAs.SpellOut);
+            //atisBrief.AppendTextWithHint(millibarFinal.ToString(), SayAs.SpellOut);
+            atisBrief.AppendText(ConvertNumbersToWords(millibarFinal.ToString()));
             richTextBox_log.AppendText(Environment.NewLine +
                 "Millibar: " + millibarFinal + " hPa");
             kneeboardAtisString = kneeboardAtisString +
@@ -1787,9 +1741,11 @@ namespace DCS_Weather_Atis_Information_Utility
             atisBrief.AppendBreak();
 
             atisBrief.AppendText("Altimeter: ");
-            atisBrief.AppendTextWithHint(firstTwoInMgDigits, SayAs.SpellOut);
+            //atisBrief.AppendTextWithHint(firstTwoInMgDigits, SayAs.SpellOut);
+            atisBrief.AppendText(ConvertNumbersToWords(firstTwoInMgDigits.ToString()));
             atisBrief.AppendText("decimal");
-            atisBrief.AppendTextWithHint(lastTwoInMgDigits, SayAs.SpellOut);
+            //atisBrief.AppendTextWithHint(lastTwoInMgDigits, SayAs.SpellOut);
+            atisBrief.AppendText(ConvertNumbersToWords(lastTwoInMgDigits.ToString()));
             richTextBox_log.AppendText(Environment.NewLine +
                 "Altimeter: " + firstTwoInMgDigits + "." + lastTwoInMgDigits + " inHg");
             kneeboardAtisString = kneeboardAtisString +
@@ -1861,7 +1817,8 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 atisBrief.AppendText("Landing and departing runway ");
                 GetlandingAndDepartingRunway();
-                atisBrief.AppendTextWithHint(runwayToTakeoffFromInt2DigitsToVoice, SayAs.SpellOut);
+                //atisBrief.AppendTextWithHint(runwayToTakeoffFromInt2DigitsToVoice, SayAs.SpellOut);
+                atisBrief.AppendText(ConvertNumbersToWords(runwayToTakeoffFromInt2DigitsToVoice.ToString()));
                 atisBrief.AppendText("in use");
                 richTextBox_log.AppendText(Environment.NewLine +
                 "Runway: " + runwayToTakeoffFromInt2DigitsToVoice);
@@ -1889,8 +1846,11 @@ namespace DCS_Weather_Atis_Information_Utility
             richTextBox_log.ScrollToEnd();
 
             exportWxKneeboardToDcs();
-            sayAtisBrief();
 
+            if (isWaifuModeOn)
+                atisBrief.EndVoice();//this is how you end the japanese voice.. the pair for this is StartVoice
+
+            sayAtisBrief();
         }
 
         
@@ -1959,7 +1919,13 @@ namespace DCS_Weather_Atis_Information_Utility
 
         public void sayAtisBrief()
         {
+
+            //synth.SelectVoice("Microsoft Haruka Desktop");
+            
             synth.SpeakAsync(atisBrief);
+
+            /*     synth.SelectVoice("Microsoft Haruka Desktop");
+             synth.SpeakAsync(atisBrief);*/
         }
 
         private void syth_SpeakCompleted(object sender, SpeakCompletedEventArgs e)
@@ -2207,218 +2173,6 @@ namespace DCS_Weather_Atis_Information_Utility
         {
             whatButtonDidTheyPress = "theSpButton";
             userPressedSpOrMpButton();
-            //playBrief = true;
-            ////https://stackoverflow.com/questions/10753661/how-to-check-a-var-for-null-value
-            //if (dcsSavedGamesFolder == null)//selection check
-            //{
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Please select your DCS Saved Games Options.lua file." + mizName);
-            //    richTextBox_log.ScrollToEnd();
-            //    return;
-            //}
-
-            //saveSettings();//saved the settings to the json
-            //synth.SpeakAsyncCancelAll();//stops the atis broadcast if it was going
-            //atisBrief.ClearContent();//clears the atis broadcast queue
-            //if (File.Exists(missionFileToDelete))
-            //{
-            //    File.Delete(missionFileToDelete);
-            //}
-            ////https://stackoverflow.com/questions/1179970/how-to-find-the-most-recent-file-in-a-directory-using-net-and-without-looping
-
-
-            //FileInfo newestSPFile = GetNewestFile(new DirectoryInfo(spTrackFolder));
-            //////this needs to be an && because if one is true it trips and thinks there are no files
-            //if (Directory.GetFiles(spTrackFolder, "*.miz").Length == 0 && Directory.GetFiles(spTrackFolder, "*.trk").Length == 0)
-            //{
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "No files found.");
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .miz files is " +
-            //            (Directory.GetFiles(spTrackFolder, "*.miz").Length.ToString()));
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .trk files is " +
-            //            (Directory.GetFiles(spTrackFolder, "*.trk").Length.ToString()));
-            //    //a miz or trk isnt detected so tell the user and stop processing stuff
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Please make sure you are in a Single Player mission. No MP mission file was located in  - " + spTrackFolder);
-            //    richTextBox_log.ScrollToEnd();
-            //    return;
-            //}
-            //else
-            //{
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Found .miz or .trk files.");
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .miz files is " +
-            //            (Directory.GetFiles(spTrackFolder, "*.miz").Length.ToString()));
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .miz files is " +
-            //            (Directory.GetFiles(spTrackFolder, "*.trk").Length.ToString()));
-            //    //continue
-            //}
-
-            //spFileCreationTime = File.GetLastWriteTime(newestSPFile.DirectoryName);//.ToString() returned some date from year 1601, haha
-
-            //if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "The most recent SP mission file was created - " + spFileCreationTime);
-            //richTextBox_log.ScrollToEnd();
-
-
-
-            //    newestSPFile = new FileInfo(Path.Combine(spTrackFolder, "tempMission.miz")); //bc i know that should be the filename
-            //if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "The SP mission file is newer.");
-            //    newestFileName = newestSPFile;
-
-
-            //if (newestFileName.Name.Contains(".trk") || newestFileName.Name.Contains(".miz"))//you can change this to .miz fort testing
-            //{
-            //    mizName = newestFileName.FullName;
-            //    //MessageBox.Show(mpTrackFolder);
-            //    //MessageBox.Show(mizName);
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Newest .trk or .miz has been located - " + mizName);
-            //    richTextBox_log.ScrollToEnd();
-
-            //    if (File.Exists(mizName))
-            //    {
-            //        //unzip
-            //        using (ZipFile zip = ZipFile.Read(mizName))
-            //        {
-            //            ZipEntry p = zip["mission"];//i changed e to p
-            //            p.Extract(DcsWaifuSettingsLocation, ExtractExistingFileAction.OverwriteSilently);//?
-            //        }
-            //    }
-            //    else
-            //    {
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Please make sure you are in a Single Player mission. No SP mission file was located at  - " + mizName);
-            //        richTextBox_log.ScrollToEnd();
-            //        return;
-            //    }
-
-            //    var missionLuaText = LsonVars.Parse(File.ReadAllText(Path.Combine(DcsWaifuSettingsLocation, "mission")));//?
-
-
-            //    //lua version
-
-
-            //    //getTheatreFromLua();
-            //    if (runway1.Equals(runway2))
-            //    {
-
-            //        theatre = missionLuaText["mission"]["theatre"].GetString();//result is "theatre" containing "Syria"
-            //        //we need to strip the name of the theatre because it contains quotes from above
-            //        //nevermind, i was just using the wrong thing above. i was using ".ToString()" instead of ".GetString()". oops.
-            //        //https://stackoverflow.com/questions/3210393/how-do-i-remove-all-non-alphanumeric-characters-from-a-string-except-dash
-            //        //theatre = new string(theatre.Where(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c) || c == '-').ToArray());
-            //        //idk why the cleaning isnt working. i was double wrong. So, im just gonna make a condition to force it
-
-            //        if (theatre.Contains("Caucasus"))
-            //        {
-            //            theatre = "Caucasus";
-            //        }
-            //        else if (theatre.Contains("Persian"))
-            //        {
-            //            theatre = "Persian Gulf";
-            //        }
-            //        else if (theatre.Contains("Channel"))
-            //        {
-            //            theatre = "Channel";
-            //        }
-            //        else if (theatre.Contains("Nevada"))
-            //        {
-            //            theatre = "Nevada";
-            //        }
-            //        else if (theatre.Contains("Normandy"))
-            //        {
-            //            theatre = "Normandy";
-            //        }
-            //        else if (theatre.Contains("Syria"))
-            //        {
-            //            theatre = "Syria";
-            //        }
-            //        else//this is to catch errors or new maps
-            //        {
-            //            theatre = "General";
-            //        }
-
-
-            //    }
-            //    else
-            //    {
-            //        //keep the value that was made via the combo box
-            //    }
-
-            //    getInformationLetter();//result is "atisInformationLetter" containing "Alpha"
-
-            //    //--getWindsFromLua---//
-            //    windSpeedGroundLua = missionLuaText["mission"]["weather"]["wind"]["atGround"]["speed"].GetDouble();
-            //    //i have to use the "lenient" version because the normal version gives an error bc it thinks the value is 
-            //    //a int (which it is), but for formating purposes we want it to be a string.
-            //    windDirectionGroundLua = missionLuaText["mission"]["weather"]["wind"]["atGround"]["dir"].GetStringLenient();//https://stackoverflow.com/questions/20375109/how-can-i-convert-a-var-type-to-int
-            //    windDirectionGroundLua = Math.Round(Convert.ToDouble(windDirectionGroundLua), 2).ToString();//this makes sure that values like 299.99999 get rounded to a three digit number
-            //    //MessageBox.Show(windDirectionGroundLua.ToString());
-            //    getWindsFromLua();//results
-            //                      //windSpeedGroundString containing "calm" or "25"
-            //                      //windDirectionGroundLua containing "123"
-            //                      //the logic for the completed and formated string is already in the method, but currently commented out
-
-            //    //---Get Visibility from the Lua file---//
-            //    generalVisibilityLua = missionLuaText["mission"]["weather"]["visibility"]["distance"].GetIntLenient();
-            //    dustVisibilityLua = missionLuaText["mission"]["weather"]["dust_density"].GetIntLenient();
-            //    isFogEnabledLua = missionLuaText["mission"]["weather"]["enable_fog"].ToString();
-            //    fogVisibilityLua = missionLuaText["mission"]["weather"]["fog"]["visibility"].GetIntLenient();
-            //    //in dcs, even if fog is enable, if you set the vsibility slider to 0, fog will not appear
-            //    //this recognizes that and basically says "no, there isnt actually fog" by
-            //    //setting the "isFogEnabledLua" value to "false"
-            //    if (fogVisibilityLua == 0)
-            //    {
-            //        isFogEnabledLua = "false";
-            //    }
-            //    isDustEnabledLua = missionLuaText["mission"]["weather"]["enable_dust"].ToString();
-            //    GetVisibilityFromLua();
-            //    //result: generalVisibilityMiles that contains the number of miles of vis. the logic for the formating is in the method, but currently commented out
-
-            //    //---Get Clouds from the Lua file---//
-            //    cloudDensityNumberLua = missionLuaText["mission"]["weather"]["clouds"]["density"].ToString();
-            //    cloudHeightLua = missionLuaText["mission"]["weather"]["clouds"]["base"].GetDouble();
-            //    precipValue = missionLuaText["mission"]["weather"]["clouds"]["iprecptns"].GetInt();
-            //    GetCloudsFromLua();
-            //    //results: cloudDensityAmountLua contains the sky condition
-            //    //cloudHeightFeetDecimal_rounded_int contains the height of the cloud in feet rounded to nearest 100
-            //    //precipValue contains 1 or 2. Rain or rain/thunder
-            //    //the logic for the formating is in the method, but currently commented out
-
-            //    //---Get Temp and Dewpoint from the Lua file---//
-            //    temperatureLua = missionLuaText["mission"]["weather"]["season"]["temperature"].GetDouble();
-            //    GetTempAndDewPointFromLua();
-            //    //Results
-            //    //temperatureActual contains "18"
-            //    //dewpointTemperature_string contains "8"
-            //    //the logic for the formating is in the method, but currently commented out
-
-            //    //---Get QNH and inHg from the Lua file---//
-            //    qnhLua = missionLuaText["mission"]["weather"]["qnh"].GetDouble();
-            //    GetQnhFromLua();
-            //    //Results:
-            //    //qnhActual contains "765"
-            //    //firstTwoInMgDigits contains "29"
-            //    //lastTwoInMgDigits contains "92"
-            //    //the logic for the formating is in the method, but currently commented out
-
-            //    generateAtisBrief();
-            //}
-            //else
-            //{
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "The newest file isn't a .trk or .miz :(");
-            //    richTextBox_log.ScrollToEnd();
-            //}
         }
 
         DateTime mpFileCreationTime;
@@ -2427,197 +2181,6 @@ namespace DCS_Weather_Atis_Information_Utility
         {
             whatButtonDidTheyPress = "theMpButton";
             userPressedSpOrMpButton();
-            //playBrief = true;
-            ////https://stackoverflow.com/questions/10753661/how-to-check-a-var-for-null-value
-            //if (dcsSavedGamesFolder == null)//selection check
-            //{
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Please select your DCS Saved Games Options.lua file." + mizName);
-            //    richTextBox_log.ScrollToEnd();
-            //    return;
-            //}
-
-
-            //saveSettings();//saved the settings to the json
-            //synth.SpeakAsyncCancelAll();//stops the atis broadcast if it was going
-            //atisBrief.ClearContent();//clears the atis broadcast queue
-            //if (File.Exists(missionFileToDelete))
-            //{
-            //    File.Delete(missionFileToDelete);
-            //}
-            ////https://stackoverflow.com/questions/1179970/how-to-find-the-most-recent-file-in-a-directory-using-net-and-without-looping
-
-
-            //FileInfo newestMPFile = GetNewestFile(new DirectoryInfo(mpTrackFolder));
-
-
-
-            ////https://stackoverflow.com/questions/23081412/check-if-folder-contains-files-with-certain-extensions
-            ////https://stackoverflow.com/questions/4366976/how-to-compare-two-files-based-on-datetime
-            ////this needs to be an && because if one is true it trips and thinks there are no files
-            //if (Directory.GetFiles(mpTrackFolder, "*.miz").Length == 0 && Directory.GetFiles(mpTrackFolder, "*.trk").Length == 0) 
-            //{
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "No files found.");
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .miz files is " + 
-            //            (Directory.GetFiles(mpTrackFolder, "*.miz").Length.ToString()));
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .trk files is " + 
-            //            (Directory.GetFiles(mpTrackFolder, "*.trk").Length.ToString()));
-            //    //a miz or trk isnt detected so tell the user and stop processing stuff
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Please make sure you are in a Multiplayer mission. No MP mission file was located in  - " + mpTrackFolder);
-            //    richTextBox_log.ScrollToEnd();
-            //    return;
-            //}
-            //else
-            //{
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Found .miz or .trk files.");
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .miz files is " + 
-            //            (Directory.GetFiles(mpTrackFolder, "*.miz").Length.ToString()));
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Number of .miz files is " + 
-            //            (Directory.GetFiles(mpTrackFolder, "*.trk").Length.ToString()));
-            //    //continue
-            //}
-            //    mpFileCreationTime = File.GetLastWriteTime(newestMPFile.DirectoryName);//this crashes the probram if the directory is empty
-            ////.ToString() returned some date from year 1601, haha
-
-            //if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "The most recent MP mission file was created - " + mpFileCreationTime);
-
-            //richTextBox_log.ScrollToEnd();
-
-
-
-            //if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "The MP mission file is newer.");
-            //    newestFileName = newestMPFile;
-
-
-
-            //if (newestFileName.Name.Contains(".trk") || newestFileName.Name.Contains(".miz"))//you can change this to .miz fort testing
-            //{
-            //    mizName = newestFileName.FullName;
-            //    //MessageBox.Show(mpTrackFolder);
-            //    //MessageBox.Show(mizName);
-            //    if (isLogModeEnabled)//supper shorthand for "if true do the next line"
-            //        richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "Newest .trk or .miz has been located - " + mizName);
-            //    richTextBox_log.ScrollToEnd();
-
-            //        //unzip
-            //        using (ZipFile zip = ZipFile.Read(mizName))
-            //    {
-            //        ZipEntry p = zip["mission"];//i changed e to p
-            //        p.Extract(DcsWaifuSettingsLocation, ExtractExistingFileAction.OverwriteSilently);//?
-            //    }
-
-            //    var missionLuaText = LsonVars.Parse(File.ReadAllText(Path.Combine(DcsWaifuSettingsLocation, "mission")));//?
-            //    //lua version
-
-
-            //    //getTheatreFromLua();
-            //    if (runway1.Equals(runway2))
-            //    {
-
-            //        theatre = missionLuaText["mission"]["theatre"].ToString();//result is "theatre" containing "Syria"
-            //        if (theatre.Contains("Caucasus"))
-            //        {
-            //            theatre = "Caucasus";
-            //        }
-            //        else if (theatre.Contains("Persian"))
-            //        {
-            //            theatre = "Persian Gulf";
-            //        }
-            //        else if (theatre.Contains("Channel"))
-            //        {
-            //            theatre = "Channel";
-            //        }
-            //        else if (theatre.Contains("Nevada"))
-            //        {
-            //            theatre = "Nevada";
-            //        }
-            //        else if (theatre.Contains("Normandy"))
-            //        {
-            //            theatre = "Normandy";
-            //        }
-            //        else if (theatre.Contains("Syria"))
-            //        {
-            //            theatre = "Syria";
-            //        }
-            //        else//this is to catch errors or new maps
-            //        {
-            //            theatre = "General";
-            //        }
-
-            //    }
-            //    else
-            //    {
-            //        //keep the value that was made via the combo box
-            //    }
-            //    getInformationLetter();//result is "atisInformationLetter" containing "Alpha"
-
-            //    //--getWindsFromLua---//
-            //    windSpeedGroundLua = missionLuaText["mission"]["weather"]["wind"]["atGround"]["speed"].GetDouble();
-            //    windDirectionGroundLua = missionLuaText["mission"]["weather"]["wind"]["atGround"]["dir"].GetStringLenient();//https://stackoverflow.com/questions/20375109/how-can-i-convert-a-var-type-to-int
-            //    windDirectionGroundLua = Math.Round(Convert.ToDouble(windDirectionGroundLua),2).ToString();//this makes sure that values like 299.99999 get rounded to a three digit number
-            //    //MessageBox.Show(windDirectionGroundLua.ToString()); 
-            //    getWindsFromLua();//results
-            //                      //windSpeedGroundString containing "calm" or "25"
-            //                      //windDirectionGroundLua containing "123"
-            //                      //the logic for the completed and formated string is already in the method, but currently commented out
-
-            //    //---Get Visibility from the Lua file---////TODO 4: remove the "conver to int" and "getint"
-            //    generalVisibilityLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["visibility"]["distance"].GetInt());
-            //    dustVisibilityLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["dust_density"].GetInt());
-            //    fogVisibilityLua = Convert.ToInt32(missionLuaText["mission"]["weather"]["fog"]["visibility"].GetInt());
-            //    isFogEnabledLua = missionLuaText["mission"]["weather"]["enable_fog"].ToString();
-            //    isDustEnabledLua = missionLuaText["mission"]["weather"]["enable_dust"].ToString();
-            //    GetVisibilityFromLua();
-            //    //result: generalVisibilityMiles that contains the number of miles of vis. the logic for the formating is in the method, but currently commented out
-
-            //    //---Get Clouds from the Lua file---//
-            //    cloudDensityNumberLua = missionLuaText["mission"]["weather"]["clouds"]["density"].ToString();
-            //    cloudHeightLua = missionLuaText["mission"]["weather"]["clouds"]["base"].GetDouble();
-            //    precipValue = missionLuaText["mission"]["weather"]["clouds"]["iprecptns"].GetInt();
-            //    GetCloudsFromLua();
-            //    //results: cloudDensityAmountLua contains the sky condition
-            //    //cloudHeightFeetDecimal_rounded_int contains the height of the cloud in feet rounded to nearest 100
-            //    //precipValue contains 1 or 2. Rain or rain/thunder
-            //    //the logic for the formating is in the method, but currently commented out
-
-            //    //---Get Temp and Dewpoint from the Lua file---//
-            //    temperatureLua = missionLuaText["mission"]["weather"]["season"]["temperature"].GetDouble();
-            //    GetTempAndDewPointFromLua();
-            //    //Results
-            //    //temperatureActual contains "18"
-            //    //dewpointTemperature_string contains "8"
-            //    //the logic for the formating is in the method, but currently commented out
-
-            //    //---Get QNH and inHg from the Lua file---//
-            //    qnhLua = missionLuaText["mission"]["weather"]["qnh"].GetDouble();
-            //    GetQnhFromLua();
-            //    //Results:
-            //    //qnhActual contains "765"
-            //    //firstTwoInMgDigits contains "29"
-            //    //lastTwoInMgDigits contains "92"
-            //    //the logic for the formating is in the method, but currently commented out
-
-            //    generateAtisBrief();
-            //}
-            //else
-            //{
-            //    richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
-            //        "The newest file isn't a .trk :(");
-            //    richTextBox_log.ScrollToEnd();
-            //}
-
         }
         
         
@@ -2641,64 +2204,7 @@ namespace DCS_Weather_Atis_Information_Utility
 
         private void airport_comboBox_loaded(object sender, RoutedEventArgs e)
         {
-            //// ... A List.
-            //List<string> airports = new List<string>();
-            ////https://stackoverflow.com/questions/14987156/one-key-to-multiple-values-dictionary-in-c
-            ////var airports = new Dictionary<string, Tuple<string, string, string>>();
-            //airports.Add("General WX");
-            //airports.Add("Caucasus: Anapa");
-            //airports.Add("Caucasus: Batumi");
-            //airports.Add("Caucasus: Gelendzhik");
-            //airports.Add("Caucasus: Gudauta");
-            //airports.Add("Caucasus: Kobuleti");
-            //airports.Add("Caucasus: Krasnodar-Center");
-            //airports.Add("Caucasus: Krasnodar-Pashkovsky");
-            //airports.Add("Caucasus: Krymsk");
-            //airports.Add("Caucasus: Kutaisi");
-            //airports.Add("Caucasus: Maykop");
-            //airports.Add("Caucasus: Mineral'nye Vody");
-            //airports.Add("Caucasus: Mozdok");
-            //airports.Add("Caucasus: Nalchik");
-            //airports.Add("Caucasus: Novorossiysk");
-            //airports.Add("Caucasus: Senaki");
-            //airports.Add("Caucasus: Sochi");
-            //airports.Add("Caucasus: Soganlug");
-            //airports.Add("Caucasus: Sukhumi");
-            //airports.Add("Caucasus: Tblisi");
-            //airports.Add("Caucasus: Vaziani");
-            ////cauc end
-            ////channel start
-            //airports.Add("The Channel: Detling");
-            //airports.Add("The Channel: Hawkinge");
-            //airports.Add("The Channel: High Halden");
-            //airports.Add("The Channel: Lympne");
-            //airports.Add("The Channel: Abberville Drucat");
-            //airports.Add("The Channel: Dunkirk Mardyck");
-            //airports.Add("The Channel: Merville Calonne");
-            //airports.Add("The Channel: Saint Omer Longuenesse");
-            ////channel end
-            ////syria start
-            //airports.Add("Syria: Abu al-Duhur AB");
-            ////syria uhnfinished
-            ////pg start
-            //airports.Add("Persian Gulf: Aba Musa Island Airport");
-            ////pg uhnfinished
-            ////Normandy start
-            //airports.Add("Normandy: Argentan");
-            ////Normandy uhnfinished
-            ////Nevada start
-            //airports.Add("Nevada: Beatty Airport");
-            ////Nevada uhnfinished
-
-
-            //// ... Get the ComboBox reference.
-            //var comboBox = sender as ComboBox;
-
-            //// ... Assign the ItemsSource to the List.
-            //comboBox.ItemsSource = airports;
-
-            //// ... Make the first item selected.
-            //comboBox.SelectedIndex = 0;
+            
         }
 
 
@@ -3663,7 +3169,7 @@ namespace DCS_Weather_Atis_Information_Utility
         {//https://stackoverflow.com/questions/10805134/how-to-clear-text-content-in-richtextbox
             //clears the log when you click the log label
             
-            //the L key with clicking the ATIS word will toggle Log mode
+            //the L key with clicking the ATIS word will toggle Log mode. hold L
             if (Keyboard.IsKeyDown(Key.L) && isLogModeEnabled == false)//log mode
             {
                 richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "Log Mode Enabled");
@@ -3691,6 +3197,11 @@ namespace DCS_Weather_Atis_Information_Utility
                 richTextBox_log.AppendText(Environment.NewLine + "DCS Weather Atis Information Utility (WAIFU)");
                 richTextBox_log.AppendText(Environment.NewLine + "~Bailey");
                 richTextBox_log.ScrollToEnd();
+            }
+            if (Keyboard.IsKeyDown(Key.W))//waifu mode
+            {
+                richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " + "WAIFU Mode Enabled");
+                isWaifuModeOn = true;
             }
         }
         
@@ -4018,6 +3529,51 @@ namespace DCS_Weather_Atis_Information_Utility
             }
             else//if DCS is running, the program will continue
             { }
+        }
+
+
+        static string ConvertNumbersToWords(string incomingNumber)
+        {
+            string additivenumber = "";
+            //https://www.dotnetperls.com/switch-char
+            foreach (char c in incomingNumber)//this is repeated as many times as there are characters
+            {
+                switch (c)
+                {
+                    case'0':
+                        additivenumber = additivenumber + "zero ";
+                        break;
+                    case '1':
+                        additivenumber = additivenumber + "one ";
+                        break;
+                    case '2':
+                        additivenumber = additivenumber + "two ";
+                        break;
+                    case '3':
+                        additivenumber = additivenumber + "three ";
+                        break;
+                    case '4':
+                        additivenumber = additivenumber + "four ";
+                        break;
+                    case '5':
+                        additivenumber = additivenumber + "five ";
+                        break;
+                    case '6':
+                        additivenumber = additivenumber + "six ";
+                        break;
+                    case '7':
+                        additivenumber = additivenumber + "seven ";
+                        break;
+                    case '8':
+                        additivenumber = additivenumber + "eight ";
+                        break;
+                    case '9':
+                        additivenumber = additivenumber + "niner ";
+                        break;
+                }
+            }
+            incomingNumber = additivenumber;
+            return incomingNumber;
         }
        
     }
