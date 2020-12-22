@@ -110,9 +110,12 @@ using Path = System.IO.Path;
  * waifu closes based on special menu options (complete)
  * make the dcs/mods/options icons for the module bar (complete)
  * Launch With DCS (requested by Hornel/Lion) (complete)
+ * clean up the kneeboard after close (complete)
  * 
  * 
  * TODO 2:
+ * have the dewpoint calculate up to the higest cloud layer
+ * in fog, temp == dewpoint (?)
  * test waifu mode on a different setup
  * make a demo video (keep it short!) and explain the features (with waifu voice)
  * 
@@ -161,6 +164,19 @@ using Path = System.IO.Path;
  * 
  * G:\Games\DCS World OpenBeta\Scripts\Aircrafts\_Common\Cockpit\KNEEBOARD
  * G:\Games\DCS World OpenBeta\Scripts\Aircrafts\_Common\Cockpit\KNEEBOARD\indicator\CUSTOM\test_user_chart.lua
+ * 
+ * Files of Interest:
+ * G:\Games\DCS World OpenBeta\Mods\terrains\Caucasus\Radio.lua
+ * G:\Games\DCS World OpenBeta\Mods\terrains\Caucasus\AirfieldsCfgs\ (multiple)
+ * 
+ * 
+ * Version Notes:
+ * v1
+ * -Initial Release
+ * v2
+ * -Added options for WAIFU to launch and close with DCS
+ * v3
+ * -Cleans up the dynamic kneeboard after WAIFU closes
  */
 
 namespace DCS_Weather_Atis_Information_Utility
@@ -3232,6 +3248,12 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 File.Delete(missionFileToDelete);//cleaning up the file
             }
+
+            if (File.Exists(kneeboardExportFilePath))
+            {
+                File.Delete(kneeboardExportFilePath);//cleaning up the kneeboard file
+            }
+            
             System.Windows.Application.Current.Shutdown();
         }
 
@@ -3294,8 +3316,6 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 File.Delete(missionFileToDelete);
             }
-
-
 
             //https://stackoverflow.com/questions/1179970/how-to-find-the-most-recent-file-in-a-directory-using-net-and-without-looping
             if (whatButtonDidTheyPress.Contains("theSpButton"))
