@@ -2669,6 +2669,8 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 runway1 = ("15");
                 runway2 = ("33");
+                runway1 = ("05");
+                runway2 = ("23");
             }
             else if (selectedAirport.Contains("Sayqal"))
             {
