@@ -114,6 +114,11 @@ using Path = System.IO.Path;
  * 
  * 
  * TODO 2:
+ * check to make sure that the app used the lua method for reading the file vice the parse method
+ * fix the errors that were created by DCS v2.7
+ * streamline the addition of new airports (likely with easy instructions
+ * have the airports in a dictionary with the runways as the value and the airport as the key
+ * see if you can get the information straight from the dcs install. maybe
  * have the dewpoint calculate up to the higest cloud layer
  * in fog, temp == dewpoint (?)
  * test waifu mode on a different setup
@@ -177,6 +182,9 @@ using Path = System.IO.Path;
  * -Added options for WAIFU to launch and close with DCS
  * v3
  * -Cleans up the dynamic kneeboard after WAIFU closes
+ * v4
+ *-Added Syria Airports
+ *-Known Bug: DCS v2.7 causes inaccurate reports in some cases
  */
 
 namespace DCS_Weather_Atis_Information_Utility
@@ -248,8 +256,6 @@ namespace DCS_Weather_Atis_Information_Utility
 
 
         //-----Global Variables-----///
-
-
        
         public MainWindow()
         {
@@ -1665,15 +1671,7 @@ namespace DCS_Weather_Atis_Information_Utility
             }
 
 
-
-
-
-
-
             atisBrief.AppendBreak();
-
-
-
 
             atisBrief.AppendText("Temperature: ");
             //this is to prevent the synth from saying something like "Temperature hypen one three"
@@ -1749,8 +1747,6 @@ namespace DCS_Weather_Atis_Information_Utility
                millibarFinal +
                //"\\n";
                " / ";
-
-
 
 
             //i took the "\n" out and added the  "/" for better irl formating
@@ -1843,7 +1839,6 @@ namespace DCS_Weather_Atis_Information_Utility
               "\\n";
             }
             
-
 
             atisBrief.AppendBreak();
 
@@ -2081,7 +2076,6 @@ namespace DCS_Weather_Atis_Information_Utility
             soundPlayer.PlaySync();
             soundPlayer.SoundLocation = samplesTempLocation + @"brief complete.wav";//intro
             soundPlayer.PlaySync();
-           
         }
 
         private void stopAtis_button_click(object sender, RoutedEventArgs e)
@@ -2091,7 +2085,6 @@ namespace DCS_Weather_Atis_Information_Utility
             atisBrief.ClearContent();
         }
 
-        
 
         string windDirectionGroundLuaStringRounded;
         int windDirectionGroundLuaIntRounded;
@@ -2128,26 +2121,18 @@ namespace DCS_Weather_Atis_Information_Utility
             {
                 runwayToTakeoffFromInt2DigitsToVoice =runwayToTakeoffFromInt2Digits.ToString();
             }
-
-           
-
-
-
-
         }
 
         private void synthSpeed_slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {//https://stackoverflow.com/questions/14557965/how-to-change-sliders-selection-color-in-wpf
             synth.Rate = (int)synthSpeed_slider.Value;
             synthSpeed_slider.SelectionEnd = synthSpeed_slider.Value;
-
         }
 
         private void synthVolume_slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             synth.Volume = (int)synthVolume_slider.Value;
             synthVolume_slider.SelectionEnd = synthVolume_slider.Value;
-
         }
 
         public void saveSettings()
@@ -2670,6 +2655,48 @@ namespace DCS_Weather_Atis_Information_Utility
                 runway1 = ("02");
                 runway2 = ("20");
             }
+            else if (selectedAirport.Contains("H4"))
+            {
+                runway1 = ("10");
+                runway2 = ("28");
+            }
+            else if (selectedAirport.Contains("Gaziantep"))
+            {
+                runway1 = ("10");
+                runway2 = ("28");
+            }
+            else if (selectedAirport.Contains("Rosh Pina"))
+            {
+                runway1 = ("15");
+                runway2 = ("33");
+            }
+            else if (selectedAirport.Contains("Sayqal"))
+            {
+                runway1 = ("06");
+                runway2 = ("24");
+                runway3 = ("08");
+                runway4 = ("26");
+            }
+            else if (selectedAirport.Contains("Shayrat"))
+            {
+                runway1 = ("11");
+                runway2 = ("29");
+            }
+            else if (selectedAirport.Contains("Tiyas"))
+            {
+                runway1 = ("09");
+                runway2 = ("27");
+            }
+            else if (selectedAirport.Contains("Tha'lah"))
+            {
+                runway1 = ("05");
+                runway2 = ("23");
+            }
+            else if (selectedAirport.Contains("Naqoura"))
+            {
+                runway1 = ("06");
+                runway2 = ("24");
+            }
             //end of syria
             //start of nevada
             else if (selectedAirport.Contains("Beatty Airport"))
@@ -3019,7 +3046,7 @@ namespace DCS_Weather_Atis_Information_Utility
             theatre = comboBox.SelectedItem as string;
             //tell the user that the airport is selected
             DateTime currentTime = DateTime.Now;
-            //do the blow if the program has been running for more than 5 seconds. you can make this lower if you want
+            //do the below if the program has been running for more than 5 seconds. you can make this lower if you want
             if (currentTime > programStartTime.AddSeconds(5))
             {
                 richTextBox_log.AppendText(Environment.NewLine + DateTime.Now + ": " +
@@ -3141,7 +3168,8 @@ namespace DCS_Weather_Atis_Information_Utility
                 "Marj as Sultan Heliport North", "Marj as Sultan Heliport South", "Marj Ruhayyil AB", 
                 "Megiddo Airport", "Mezzeh Military Airport", "Minakh AB", "Palmyra Airport", 
                 "Qabr as Sitt Heliport", "Ramat David AB", "Rayak Air Base", "Rene Mouawad AB", 
-                "Tabqa AB", "Taftanaz AB", "Wujah Al Hajar AB" };
+                "Tabqa AB", "Taftanaz AB", "Wujah Al Hajar AB",
+                "H4", "Gaziantep", "Rosh Pina", "Sayqal", "Shayrat", "Tiyas", "Tha'lah", "Naqoura"};//added with DCS v2.7
         }
 
         public void AddNormandyAirports()
@@ -3595,7 +3623,5 @@ namespace DCS_Weather_Atis_Information_Utility
             incomingNumber = additivenumber;
             return incomingNumber;
         }
-       
     }
-   
 }
